@@ -1,5 +1,8 @@
 from flask import Flask, request, send_file, render_template
 from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+import PyPDF2
+from PyPDF2 import PdfFileReader, PdfFileWriter, PdfWriter, PdfReader
 from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import serialization, hashes
@@ -7,6 +10,7 @@ from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.x509.name import NameOID
 from cryptography.x509 import CertificateBuilder
 from datetime import datetime, timezone, timedelta
+import textwrap
 import requests
 import os
 import socket
@@ -78,12 +82,13 @@ def generate_certificate(name, roll_number, private_key):
     # Create a new PDF canvas with the pre-made template
     doc_name = name + ".pdf"
     pdf_canvas = canvas.Canvas(doc_name)
+    pdf_canvas.setPageSize((595.27, 841.89))
 
     # Define the location of the text fields on the PDF
-    name_x, name_y = 100, 450
-    roll_number_x, roll_number_y = 100, 400
-    timestamp_x, timestamp_y = 100, 350
-    signature_x, signature_y = 100, 25 # <-- Change y coordinate
+    name_x, name_y = 100, 750
+    roll_number_x, roll_number_y = 100, 700
+    timestamp_x, timestamp_y = 100, 650
+    signature_x, signature_y = 100, 750  # <-- Change y coordinate
 
     # Add the graduate's information to the PDF
     pdf_canvas.drawString(name_x, name_y, f"Name: {name}")
@@ -93,7 +98,6 @@ def generate_certificate(name, roll_number, private_key):
     # timestamp = int(get_ntp_time())
     # timestamp_str = time.ctime(timestamp)
     timestamp_str = get_ntp_time()
-
     pdf_canvas.drawString(timestamp_x, timestamp_y, f"Timestamp: {timestamp_str}")
 
     # Hash the PDF data
@@ -111,15 +115,15 @@ def generate_certificate(name, roll_number, private_key):
     )
 
     # Add the signature to the PDF
-    pdf_canvas.drawString(signature_x, signature_y, f"Signature: {signature.hex()}") # <-- Modify y coordinate
-
-    # # Create a new page on the canvas
-    # pdf_canvas.showPage()
+    signature_text = f"Signature: {signature.hex()}"
+    max_width = 400  # set the maximum width of the text
+    lines = textwrap.wrap(signature_text, width=50)  # split the text into lines of 50 characters
+    for i, line in enumerate(lines):
+        y = signature_y - i * 15  # change y coordinate for each line to simulate wrapping
+        pdf_canvas.drawString(signature_x, y, line)
 
     # Save the PDF file
     pdf_canvas.save()
-
-    return doc_name
 
 
 
