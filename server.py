@@ -2,7 +2,7 @@ from flask import Flask, request, send_file, render_template
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 import PyPDF2
-from PyPDF2 import PdfFileReader, PdfFileWriter, PdfWriter, PdfReader
+# from PyPDF2 import PdfReader, PdfWriter
 from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import serialization, hashes
@@ -18,6 +18,11 @@ import struct
 import time
 import hashlib
 import csv
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.units import inch
+# from PyPDF4 import PdfFileReader, PdfFileWriter
+from PyPDF4 import PdfFileReader, PdfFileWriter
+import textwrap
 
 NTP_SERVER = "time.google.com"
 
@@ -96,7 +101,6 @@ if not os.path.exists(ROOT_CERT_FILE) or not os.path.exists(ROOT_KEY_FILE):
         f.write(root_cert.public_bytes(encoding=serialization.Encoding.PEM))
 
 
-
 def generate_certificate(name, roll_number, private_key):
     # Create a new PDF canvas with the pre-made template
     doc_name = name + ".pdf"
@@ -107,16 +111,14 @@ def generate_certificate(name, roll_number, private_key):
     name_x, name_y = 100, 750
     roll_number_x, roll_number_y = 100, 700
     timestamp_x, timestamp_y = 100, 650
-    signature_x, signature_y = 100, 750  # <-- Change y coordinate
+    signature_x, signature_y = 100, 550  # Change y coordinate for signature
 
     # Add the graduate's information to the PDF
-    pdf_canvas.drawString(name_x, name_y, f"Name: {name}")
+    pdf_canvas.drawString(name_x, name_y, f"Name: {name.title()}")
     pdf_canvas.drawString(roll_number_x, roll_number_y, f"Roll Number: {roll_number}")
 
     # Add the timestamp to the PDF
-    # timestamp = int(get_ntp_time())
-    # timestamp_str = time.ctime(timestamp)
-    timestamp_str = get_ntp_time()
+    timestamp_str = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3] + " UTC"
     pdf_canvas.drawString(timestamp_x, timestamp_y, f"Timestamp: {timestamp_str}")
 
     # Hash the PDF data
@@ -140,11 +142,39 @@ def generate_certificate(name, roll_number, private_key):
     for i, line in enumerate(lines):
         y = signature_y - i * 15  # change y coordinate for each line to simulate wrapping
         pdf_canvas.drawString(signature_x, y, line)
-
-    # Save the PDF file
     pdf_canvas.save()
 
+    # Add watermark to the PDF
+    watermark_text = f"Issued to {roll_number} on {timestamp_str} by ABC University"
+    watermark_file = "watermark.pdf"
+    watermark_canvas = canvas.Canvas(watermark_file, pagesize=letter)
+    watermark_canvas.setFont('Helvetica-Bold', 15)
+    watermark_canvas.setFillColorRGB(0.5, 0.5, 0.5, 0.2)
+    watermark_canvas.rotate(45)
+    text_width = watermark_canvas.stringWidth(watermark_text)
 
+    x = -6.5 * inch
+    y = 0.5 * inch
+    while x < 8.5 * inch:
+        watermark_canvas.drawString(x, y, watermark_text)
+        x += text_width + 20
+
+    watermark_canvas.save()
+
+
+
+    # Merge the PDF with the watermark
+    input_pdf = PdfFileReader(open(doc_name, "rb"))
+    watermark_pdf = PdfFileReader(open(watermark_file, "rb"))
+    output = PdfFileWriter()
+    for i in range(input_pdf.getNumPages()):
+        page = input_pdf.getPage(i)
+        page.mergePage(watermark_pdf.getPage(0))
+        output.addPage(page)
+    with open(doc_name, "wb") as outputStream:
+        output.write(outputStream)
+
+    print(f"Certificate for {name} ({roll_number}) has been generated and saved as {doc_name}.")
 
 
 if __name__ == '__main__':
