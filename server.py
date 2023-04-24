@@ -17,11 +17,14 @@ import socket
 import struct
 import time
 import hashlib
+import csv
 
 NTP_SERVER = "time.google.com"
 
 
 app = Flask(__name__)
+app.debug = True
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -31,17 +34,33 @@ def index():
 def get_graduate_info():    
     graduate_name = request.form['graduate_name']
     roll_number = request.form['roll_number']
+    dob = request.form['dob']
+    hashed_password = request.form['hashed_password']
 
+    print(f"dob: {dob}")
+    print(f"password: {hashed_password}")
 
-    #Generate public and private key pair
-    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    public_key = private_key.public_key()
-    
-    #Generate Degree_Certificate and Grade Card
-    generate_certificate(graduate_name, roll_number, private_key)
+    #Read the students.csv file to check if the roll number exists and if the hashed password and dob match
+    with open('students.csv', mode='r') as file:
+        csv_reader = csv.reader(file)
+        found = False
+        for row in csv_reader:
+            if row[1] == roll_number and row[0] == graduate_name.lower() and row[2] == dob:
+                found = True
+                print(row[4])
+                if row[4] == hashed_password:
+                    #Generate public and private key pair
+                    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+                    public_key = private_key.public_key()
 
-    return f"Graduate Name: {graduate_name}, Roll Number: {roll_number}"
+                    #Generate Degree_Certificate and Grade Card
+                    generate_certificate(graduate_name, roll_number, private_key)
 
+                    return f"Graduate Name: {graduate_name}, Roll Number: {roll_number}, Authentication Successful!"
+                else:
+                    return "Authentication Failed: Incorrect Password"
+        if not found:
+            return "Authentication Failed: Roll Number not found in the database"
 
 
 #-------------------1---------------------

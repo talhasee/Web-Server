@@ -4,12 +4,33 @@
     <title>Graduate Info</title>
 </head>
 <body>
-    <form method="POST">
+    <form method="POST" onsubmit="hashFields()">
         <label for="graduate_name">Graduate Name:</label>
         <input type="text" id="graduate_name" name="graduate_name"><br><br>
         <label for="roll_number">Roll Number:</label>
         <input type="text" id="roll_number" name="roll_number"><br><br>
+        <label for="dob">DOB:</label>
+        <input type="date" id="dob" name="dob"><br><br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password"><br><br>
+        <input type="hidden" id="hashed_password" name="hashed_password">
         <input type="submit" value="Submit">
     </form>
+    <script>
+        function hashFields() {
+            const passwordField = document.getElementById("password");
+            const hashedPasswordField = document.getElementById("hashed_password");
+            hashedPasswordField.value = hash(passwordField.value);
+            console.log("Password: ", passwordField.value);
+            console.log("Hashed Password: ", hashedPasswordField.value);
+        }
+
+        function hash(str) {
+            const sha256 = new jsSHA("SHA-256", "TEXT");
+            sha256.update(str);
+            return sha256.getHash("HEX");
+        }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsSHA/2.0.2/sha256.js"></script>
 </body>
 </html>
