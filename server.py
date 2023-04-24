@@ -1,4 +1,4 @@
-from flask import Flask, request, send_file, render_template
+from flask import Flask, redirect, request, send_file, render_template, url_for
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 import PyPDF2
@@ -61,12 +61,19 @@ def get_graduate_info():
                     #Generate Degree_Certificate and Grade Card
                     generate_certificate(graduate_name, roll_number, private_key)
 
-                    return f"Graduate Name: {graduate_name}, Roll Number: {roll_number}, Authentication Successful!"
+                    return redirect(url_for('download_pdf', filename=f"{graduate_name}.pdf"))
                 else:
                     return "Authentication Failed: Incorrect Password"
         if not found:
             return "Authentication Failed: Roll Number not found in the database"
 
+@app.route('/download/<filename>', methods=['GET'])
+def download_pdf(filename):
+    file_path = f"{filename}"
+    if os.path.exists(file_path):
+        return send_file(file_path, as_attachment=True)
+    else:
+        return "Error: File not found"
 
 #-------------------1---------------------
 def get_ntp_time():
