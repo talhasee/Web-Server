@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+   <head>
+      <title>Download Files</title>
+   </head>
+   <body>
+      <h2>Download Degree Certificate</h2>
+      <form method="get" action="{{ url_for('download_pdf', filename=degree_name) }}">
+         <button type="submit">Download</button>
+      </form>
+      <br>
+      <h2>Download Grade Certificate</h2>
+      <form method="get" action="{{ url_for('download_pdf', filename=grade_name) }}">
+        <button type="submit">Download</button>
+     </form>
+     <br>
+    </body>
+</html>
